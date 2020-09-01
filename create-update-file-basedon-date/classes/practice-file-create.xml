@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting" xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd">
+    <http:listener-config name="HTTP_Listener_Configuration" host="localhost" port="8090" doc:name="HTTP Listener Configuration"/>
+    <file:connector name="File" autoDelete="true" streaming="true" validateConnections="true" doc:name="File"/>
+    <flow name="practice-file-createFlow">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/file/create" doc:name="HTTP"/>
+        <logger message="fllow stared" level="INFO" doc:name="Logger"/>
+        <set-variable variableName="cifNumber" value="#[json:cif-number]" doc:name="cifNumber"/>
+        <set-variable variableName="appId" value="#[json:app-id]" doc:name="appId"/>
+        <logger message="#[flowVars.appId] :::: cifNum :::: #[flowVars.cifNumber]" level="INFO" doc:name="Logger"/>
+        <scripting:component doc:name="Groovy">
+            <scripting:script engine="Groovy"><![CDATA[def date = new Date().format("yyyy-MM-dd")
+
+message.setInvocationProperty('date', date);
+return message;]]></scripting:script>
+        </scripting:component>
+        <choice doc:name="Choice">
+            <when expression="#[flowVars.cifNumber == null ||  flowVars.cifNumber == &quot;null&quot; || flowVars.cifNumber == &quot;&quot;]">
+                <file:outbound-endpoint path="C:\Users\sankeerth.gunturu\Desktop\not needed\final\onboarding-doc\#[flowVars.date]" outputPattern="EID-#[flowVars.appId]  " connector-ref="File" responseTimeout="10000" doc:name="onboarding-doc"/>
+            </when>
+            <otherwise>
+                <file:outbound-endpoint path="C:\Users\sankeerth.gunturu\Desktop\not needed\final\update-doc\#[flowVars.date]" outputPattern="EID-#[flowVars.cifNumber]" responseTimeout="10000" doc:name="update-doc"/>
+            </otherwise>
+        </choice>
+    </flow>
+</mule>
