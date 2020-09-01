@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting"
+	xmlns:sftp="http://www.mulesoft.org/schema/mule/sftp" xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/sftp http://www.mulesoft.org/schema/mule/sftp/current/mule-sftp.xsd">
+    <db:mysql-config name="MySQL_Configuration" host="localhost" port="3306" user="root" password="Mysql@123" database="dunia" doc:name="MySQL Configuration"/>
+    
+         <spring:beans>
+    <spring:bean class="SftpConnect" name="SftpConnectObj">
+    </spring:bean>
+    </spring:beans>
+    
+    <http:listener-config name="HTTP_Listener_Configuration" host="localhost" port="8078" doc:name="HTTP Listener Configuration"/>
+    <file:connector name="File" readFromDirectory="C:\Users\sankeerth.gunturu\Desktop\not needed" workFileNamePattern="test.csv" autoDelete="true" streaming="true" validateConnections="true" doc:name="File"/>
+    <db:mysql-config name="MySQL_Configuration1" host="localhost" port="3306" user="root" password="Mysql@123" database="dunia" doc:name="MySQL Configuration"/>
+    <flow name="data-from-table-excelFlow">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/table/data/write/excel" doc:name="HTTP"/>
+        <logger level="INFO" doc:name="Logger" message="flow started"/>
+        <db:select config-ref="MySQL_Configuration1" doc:name="Database">
+            <db:parameterized-query><![CDATA[select * from info_sec;]]></db:parameterized-query>
+        </db:select>
+        <logger message="#[payload]" level="INFO" doc:name="Logger"/>
+        <dw:transform-message doc:name="Transform To CSV" metadata:id="e760af84-1262-4fd3-a1c5-38f6d7a0ff33">
+            <dw:input-payload/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%input payload application/java
+%output application/xlsx
+---
+{
+	emplyeedata: payload map ( payload01 , indexOfpaylaod01 ) -> {
+		id: payload01.id,
+		first_name: payload01.first_name,
+		last_name: payload01.last_name,
+		sur_name: payload01.sur_name
+	}
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <file:outbound-endpoint path="C:\Users\sankeerth.gunturu\Desktop\not needed" outputPattern="sample123.csv" responseTimeout="10000" doc:name="File"/>
+
+        <logger message="before invoke" level="INFO" doc:name="Logger"/>
+        <invoke object-ref="SftpConnectObj" method="send"  doc:name="Invoke" methodArguments="sample123.csv"/>
+        <logger message="after invoke" level="INFO" doc:name="Logger"/>
+
+
+    </flow>
+</mule>
